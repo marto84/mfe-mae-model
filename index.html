@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MFE / MAE Conditional Probability Model</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg-primary: #0f1117;
+    --bg-secondary: #181b24;
+    --bg-tertiary: #1e2230;
+    --bg-hover: #252a38;
+    --text-primary: #e8e9ed;
+    --text-secondary: #8b8f9e;
+    --text-tertiary: #5c6070;
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.12);
+    --accent-orange: #e8752a;
+    --accent-orange-dim: rgba(232,117,42,0.15);
+    --green: #1d9e75;
+    --green-dim: rgba(29,158,117,0.15);
+    --green-bg: rgba(29,158,117,0.08);
+    --red: #e24b4a;
+    --red-dim: rgba(226,75,74,0.15);
+    --red-bg: rgba(226,75,74,0.08);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --font: 'DM Sans', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+
+  header h1 span { color: var(--accent-orange); }
+
+  header p {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-orange);
+    margin-bottom: 1rem;
+  }
+
+  /* DATA INPUT */
+  .upload-area {
+    border: 1.5px dashed var(--border-hover);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 1rem;
+  }
+
+  .upload-area:hover {
+    border-color: var(--accent-orange);
+    background: var(--accent-orange-dim);
+  }
+
+  .upload-area .icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    color: var(--text-tertiary);
+  }
+
+  .upload-area p { color: var(--text-secondary); font-size: 13px; }
+  .upload-area .hint { color: var(--text-tertiary); font-size: 11px; margin-top: 4px; }
+
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 12px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus { border-color: var(--accent-orange); }
+
+  textarea::placeholder { color: var(--text-tertiary); }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+  button {
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-hover);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  button:hover { background: var(--bg-hover); border-color: var(--accent-orange); }
+
+  button.primary {
+    background: var(--accent-orange);
+    border-color: var(--accent-orange);
+    color: #fff;
+  }
+
+  button.primary:hover { background: #cf6520; }
+
+  .status-msg {
+    font-size: 12px;
+    margin-top: 8px;
+    min-height: 18px;
+  }
+
+  .status-msg.ok { color: var(--green); }
+  .status-msg.err { color: var(--red); }
+
+  /* SLIDERS */
+  .slider-group { margin-bottom: 16px; }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .slider-label span { font-size: 13px; color: var(--text-secondary); }
+
+  .slider-val {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .slider-val.pos { color: var(--green); }
+  .slider-val.neg { color: var(--red); }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-orange);
+    cursor: pointer;
+    border: 2px solid var(--bg-primary);
+    box-shadow: 0 0 0 2px rgba(232,117,42,0.3);
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-orange);
+    cursor: pointer;
+    border: 2px solid var(--bg-primary);
+  }
+
+  /* METRICS */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .metric-card {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    border-left: 3px solid var(--border);
+  }
+
+  .metric-card.up { border-left-color: var(--green); }
+  .metric-card.down { border-left-color: var(--red); }
+
+  .metric-card .lbl {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+
+  .metric-card .num {
+    font-size: 24px;
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+
+  /* BARS */
+  .bar-section { margin-bottom: 1.5rem; }
+
+  .bar-section-title {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+
+  .bar-item { margin-bottom: 8px; }
+
+  .bar-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 3px;
+  }
+
+  .bar-header .threshold { color: var(--text-secondary); }
+  .bar-header .count { font-family: var(--mono); color: var(--text-primary); font-weight: 500; }
+
+  .bar-track {
+    height: 22px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    transition: width 0.35s ease;
+    min-width: 0;
+  }
+
+  .bar-fill.green { background: var(--green); }
+  .bar-fill.red { background: var(--red); }
+
+  /* CHART */
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 260px;
+    margin: 0.5rem 0 1rem;
+  }
+
+  /* TABLE */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary);
+    border-bottom: 1px solid var(--border-hover);
+  }
+
+  .data-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .data-table tr:hover td { background: var(--bg-tertiary); }
+
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-tertiary);
+    font-size: 13px;
+  }
+
+  .footnote {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.7;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .tab-row {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+  }
+
+  .tab:hover { color: var(--text-secondary); }
+  .tab.active { color: var(--accent-orange); border-bottom-color: var(--accent-orange); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .sample-link {
+    font-size: 12px;
+    color: var(--accent-orange);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .sample-link:hover { color: #cf6520; }
+
+  #modelSection { display: none; }
+  #modelSection.visible { display: block; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>MFE / MAE <span>conditional probability model</span></h1>
+    <p>Upload MFE and MAE distributions from Mosaic, then use sliders to model conditional probabilities as the market moves.</p>
+  </header>
+
+  <!-- DATA INPUT PANEL -->
+  <div class="panel">
+    <div class="panel-title">1. Load data</div>
+
+    <div class="tab-row">
+      <button class="tab active" data-tab="paste">Paste data</button>
+      <button class="tab" data-tab="csv">Upload CSV</button>
+    </div>
+
+    <div class="tab-content active" id="tab-paste">
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">
+        Paste your data as CSV. Each row needs: <code style="font-family:var(--mono);color:var(--accent-orange);font-size:11px;">date, 3day_cumulative, mfe, mfe_day, mae, mae_day</code>
+      </p>
+      <p style="margin-bottom:10px;">
+        <span class="sample-link" id="loadSample">Load sample data (S&P 500 Asia session 50+ pt fall)</span>
+      </p>
+      <textarea id="dataInput" placeholder="date, 3day_cumulative, mfe, mfe_day, mae, mae_day
+26/11/2021, -132, 31, D1, -142, D3
+4/11/2025, -52, 37, D1, -162, D3
+..."></textarea>
+      <div class="btn-row">
+        <button class="primary" id="parseBtn">Parse and load</button>
+        <button id="clearBtn">Clear</button>
+      </div>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+
+    <div class="tab-content" id="tab-csv">
+      <div class="upload-area" id="dropZone">
+        <div class="icon">&#8593;</div>
+        <p>Drop a CSV file here or click to browse</p>
+        <div class="hint">Columns: date, 3day_cumulative, mfe, mfe_day, mae, mae_day</div>
+      </div>
+      <input type="file" id="fileInput" accept=".csv,.tsv,.txt" style="display:none;">
+      <div class="status-msg" id="csvStatus"></div>
+    </div>
+  </div>
+
+  <!-- MODEL SECTION -->
+  <div id="modelSection">
+
+    <!-- CONTEXT BAR -->
+    <div class="panel" style="padding:14px 1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span style="font-size:13px;color:var(--text-secondary);" id="contextLabel">--</span>
+        <span style="font-family:var(--mono);font-size:13px;font-weight:500;" id="contextN">n = --</span>
+      </div>
+    </div>
+
+    <!-- SLIDERS -->
+    <div class="panel">
+      <div class="panel-title">2. Current market position (pts from reference close)</div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Points moved lower</span>
+          <span class="slider-val neg" id="lowVal">0</span>
+        </div>
+        <input type="range" min="0" max="200" value="0" step="1" id="sliderLow">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Points moved higher</span>
+          <span class="slider-val pos" id="highVal">0</span>
+        </div>
+        <input type="range" min="0" max="200" value="0" step="1" id="sliderHigh">
+      </div>
+    </div>
+
+    <!-- METRICS -->
+    <div class="metric-grid">
+      <div class="metric-card up">
+        <div class="lbl">P(further upside)</div>
+        <div class="num pos" id="mUp">--</div>
+      </div>
+      <div class="metric-card down">
+        <div class="lbl">P(further downside)</div>
+        <div class="num neg" id="mDown">--</div>
+      </div>
+      <div class="metric-card up">
+        <div class="lbl">Remaining MFE (median)</div>
+        <div class="num pos" id="mMedUp">--</div>
+      </div>
+      <div class="metric-card down">
+        <div class="lbl">Remaining MAE (median)</div>
+        <div class="num neg" id="mMedDown">--</div>
+      </div>
+    </div>
+
+    <!-- PROBABILITY BARS -->
+    <div class="panel">
+      <div class="panel-title">3. Conditional probabilities</div>
+      <div class="bar-section">
+        <div class="bar-section-title">Probability of reaching upside thresholds</div>
+        <div id="upBars"></div>
+      </div>
+      <div class="bar-section">
+        <div class="bar-section-title">Probability of reaching downside thresholds</div>
+        <div id="downBars"></div>
+      </div>
+    </div>
+
+    <!-- CHART -->
+    <div class="panel">
+      <div class="panel-title">4. Distribution overlay</div>
+      <div class="chart-wrap"><canvas id="distChart"></canvas></div>
+    </div>
+
+    <!-- DATA GRID -->
+    <div class="panel">
+      <div class="panel-title">5. Individual occurrences</div>
+      <table class="data-table" id="dataGrid"></table>
+    </div>
+
+    <div class="footnote">
+      MFE = Max Favorable Excursion (best upside reached within the lookforward window). MAE = Max Adverse Excursion (worst downside reached). Conditional probabilities filter by occurrences that actually reached the current slider level, then calculate what fraction went further. This is a base rate distribution, not a signal -- it frames risk, it does not predict direction.
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SAMPLE = `date, 3day_cumulative, mfe, mfe_day, mae, mae_day
+26/11/2021, -132, 31, D1, -142, D3
+4/11/2025, -52, 37, D1, -162, D3
+30/1/2026, 31, 60, D0, -13, D0
+13/6/2025, 17, 86, D1, -23, D1
+27/1/2025, 68, 91, D3, -80, D0
+4/2/2025, 38, 111, D3, -22, D0
+5/8/2024, 129, 137, D3, -107, D0
+20/12/2021, 162, 178, D3, -32, D0
+24/2/2022, 176, 272, D3, -23, D0
+27/1/2022, 273, 273, D3, -16, D1
+9/4/2025, 479, 573, D1, -49, D0
+7/4/2025, 440, 663, D3, -21, D0`;
+
+let DATA = [];
+let chart = null;
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// Sample data loader
+document.getElementById('loadSample').addEventListener('click', () => {
+  document.getElementById('dataInput').value = SAMPLE;
+});
+
+// Parse CSV
+function parseCSV(text) {
+  const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const results = [];
+  const startIdx = lines[0].toLowerCase().includes('date') ? 1 : 0;
+
+  for (let i = startIdx; i < lines.length; i++) {
+    const parts = lines[i].split(/[,\t]/).map(s => s.trim());
+    if (parts.length < 6) continue;
+
+    const date = parts[0];
+    const cum = parseFloat(parts[1]);
+    const mfe = Math.abs(parseFloat(parts[2]));
+    const mfeDay = parts[3];
+    const mae = -Math.abs(parseFloat(parts[4]));
+    const maeDay = parts[5];
+
+    if (isNaN(cum) || isNaN(mfe) || isNaN(mae)) continue;
+
+    results.push({ date, cum, mfe, mfeDay, mae, maeDay });
+  }
+  return results;
+}
+
+function showStatus(id, msg, ok) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status-msg ' + (ok ? 'ok' : 'err');
+}
+
+function loadData(parsed) {
+  DATA = parsed;
+
+  // Set slider ranges based on data
+  const maxMFE = Math.max(...DATA.map(d => d.mfe));
+  const maxMAE = Math.max(...DATA.map(d => Math.abs(d.mae)));
+  const sliderMax = Math.ceil(Math.max(maxMFE, maxMAE) * 1.1);
+
+  const sLow = document.getElementById('sliderLow');
+  const sHigh = document.getElementById('sliderHigh');
+  sLow.max = sliderMax;
+  sHigh.max = sliderMax;
+  sLow.value = 0;
+  sHigh.value = 0;
+
+  document.getElementById('contextN').textContent = 'n = ' + DATA.length;
+  document.getElementById('modelSection').classList.add('visible');
+
+  update();
+}
+
+document.getElementById('parseBtn').addEventListener('click', () => {
+  const text = document.getElementById('dataInput').value;
+  if (!text.trim()) { showStatus('statusMsg', 'Paste some data first.', false); return; }
+  const parsed = parseCSV(text);
+  if (parsed.length === 0) { showStatus('statusMsg', 'Could not parse any rows. Check the format.', false); return; }
+  showStatus('statusMsg', parsed.length + ' occurrences loaded.', true);
+  loadData(parsed);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  document.getElementById('dataInput').value = '';
+  document.getElementById('statusMsg').textContent = '';
+});
+
+// CSV file upload
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent-orange)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.style.borderColor = '';
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const parsed = parseCSV(e.target.result);
+    if (parsed.length === 0) { showStatus('csvStatus', 'Could not parse any rows from file.', false); return; }
+    showStatus('csvStatus', parsed.length + ' occurrences loaded from ' + file.name, true);
+    loadData(parsed);
+  };
+  reader.readAsText(file);
+}
+
+// MODEL LOGIC
+function median(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+}
+
+function genThresholds(currentVal, maxVal) {
+  const steps = [10, 20, 30, 50, 75, 100, 150, 200, 250, 300, 400, 500, 600, 700];
+  return steps.filter(s => s > currentVal && s <= maxVal * 1.2);
+}
+
+function renderBars(container, thresholds, filteredVals, isUp) {
+  const el = document.getElementById(container);
+  el.innerHTML = '';
+
+  if (filteredVals.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-tertiary);padding:8px 0;">No occurrences reached this level -- 0% historical probability</div>';
+    return;
+  }
+
+  if (thresholds.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-tertiary);padding:8px 0;">All thresholds already exceeded</div>';
+    return;
+  }
+
+  thresholds.forEach(t => {
+    const count = isUp
+      ? filteredVals.filter(v => v >= t).length
+      : filteredVals.filter(v => Math.abs(v) >= t).length;
+    const pct = Math.round((count / filteredVals.length) * 100);
+    const label = isUp ? '+' + t + ' pts or more' : '-' + t + ' pts or more';
+    const cls = isUp ? 'green' : 'red';
+
+    const div = document.createElement('div');
+    div.className = 'bar-item';
+    div.innerHTML = `
+      <div class="bar-header">
+        <span class="threshold">${label}</span>
+        <span class="count">${count}/${filteredVals.length} (${pct}%)</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill ${cls}" style="width:${Math.max(pct, 1)}%;">${pct > 10 ? pct + '%' : ''}</div>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+function update() {
+  if (!DATA.length) return;
+
+  const ptsLow = parseInt(document.getElementById('sliderLow').value);
+  const ptsHigh = parseInt(document.getElementById('sliderHigh').value);
+
+  document.getElementById('lowVal').textContent = ptsLow > 0 ? '-' + ptsLow : '0';
+  document.getElementById('highVal').textContent = ptsHigh > 0 ? '+' + ptsHigh : '0';
+
+  const n = DATA.length;
+
+  // Filter by those that reached at least this level
+  const survivingMFE = DATA.filter(d => d.mfe >= ptsHigh);
+  const survivingMAE = DATA.filter(d => Math.abs(d.mae) >= ptsLow);
+
+  const pUp = ptsHigh > 0 ? Math.round((survivingMFE.length / n) * 100) : 100;
+  const pDown = ptsLow > 0 ? Math.round((survivingMAE.length / n) * 100) : 100;
+
+  document.getElementById('mUp').textContent = pUp + '%';
+  document.getElementById('mDown').textContent = pDown + '%';
+
+  const remMFE = survivingMFE.map(d => d.mfe - ptsHigh);
+  const remMAE = survivingMAE.map(d => Math.abs(d.mae) - ptsLow);
+
+  document.getElementById('mMedUp').textContent = remMFE.length ? '+' + median(remMFE) + ' pts' : '--';
+  document.getElementById('mMedDown').textContent = remMAE.length ? '-' + median(remMAE) + ' pts' : '--';
+
+  // Bars
+  const maxMFE = Math.max(...DATA.map(d => d.mfe));
+  const maxMAE = Math.max(...DATA.map(d => Math.abs(d.mae)));
+
+  const upThresholds = genThresholds(ptsHigh, maxMFE);
+  const downThresholds = genThresholds(ptsLow, maxMAE);
+
+  renderBars('upBars', upThresholds, survivingMFE.map(d => d.mfe), true);
+  renderBars('downBars', downThresholds, survivingMAE.map(d => d.mae), false);
+
+  // Chart
+  const ctx = document.getElementById('distChart');
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: DATA.map(d => d.date),
+      datasets: [
+        {
+          label: 'MFE (upside)',
+          data: DATA.map(d => d.mfe),
+          backgroundColor: DATA.map(d => d.mfe >= ptsHigh ? '#1d9e75' : 'rgba(29,158,117,0.15)'),
+          borderRadius: 3
+        },
+        {
+          label: 'MAE (downside)',
+          data: DATA.map(d => d.mae),
+          backgroundColor: DATA.map(d => Math.abs(d.mae) >= ptsLow ? '#e24b4a' : 'rgba(226,75,74,0.15)'),
+          borderRadius: 3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#181b24',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#e8e9ed',
+          bodyColor: '#8b8f9e',
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': ' + (ctx.raw >= 0 ? '+' : '') + ctx.raw + ' pts'
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { autoSkip: false, maxRotation: 45, font: { size: 10, family: "'JetBrains Mono'" }, color: '#5c6070' },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { callback: v => (v >= 0 ? '+' : '') + v, font: { size: 10, family: "'JetBrains Mono'" }, color: '#5c6070' },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        }
+      }
+    }
+  });
+
+  // Data grid
+  const grid = document.getElementById('dataGrid');
+  grid.innerHTML = `<tr><th>Date</th><th>3-day cum.</th><th>MFE</th><th>MFE day</th><th>MAE</th><th>MAE day</th><th>Status</th></tr>`;
+  DATA.forEach(d => {
+    const hitH = d.mfe >= ptsHigh;
+    const hitL = Math.abs(d.mae) >= ptsLow;
+    let status = '--';
+    if (ptsHigh > 0 && ptsLow > 0) {
+      if (hitH && hitL) status = 'Hit both';
+      else if (hitH) status = 'Hit high only';
+      else if (hitL) status = 'Hit low only';
+      else status = 'Hit neither';
+    } else if (ptsHigh > 0) {
+      status = hitH ? 'Reached' : 'Did not reach';
+    } else if (ptsLow > 0) {
+      status = hitL ? 'Reached' : 'Did not reach';
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.date}</td>
+      <td class="${d.cum >= 0 ? 'pos' : 'neg'}">${d.cum >= 0 ? '+' : ''}${d.cum}</td>
+      <td class="pos">+${d.mfe}</td>
+      <td>${d.mfeDay}</td>
+      <td class="neg">${d.mae}</td>
+      <td>${d.maeDay}</td>
+      <td>${status}</td>`;
+    grid.appendChild(tr);
+  });
+}
+
+document.getElementById('sliderLow').addEventListener('input', update);
+document.getElementById('sliderHigh').addEventListener('input', update);
+</script>
+</body>
+</html>
