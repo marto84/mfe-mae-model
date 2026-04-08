@@ -559,7 +559,7 @@ function parseCSV(text) {
   const startIdx = lines[0].toLowerCase().includes('date') ? 1 : 0;
 
   for (let i = startIdx; i < lines.length; i++) {
-    const parts = lines[i].split(/[,\t]/).map(s => s.trim());
+    const parts = lines[i].split(/[,	]/).map(s => s.trim().replace(/\u2212/g, '-').replace(/^\+/, ''));
     if (parts.length < 6) continue;
 
     const date = parts[0];
